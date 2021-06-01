@@ -3,8 +3,8 @@
 module SparseVectorTests
 
 using Test
-using SparseArrays
-using SparseArrays: nonzeroinds, getcolptr
+using SparseArraysN
+using SparseArraysN: nonzeroinds, getcolptr
 using LinearAlgebra
 using Random
 include("forbidproperties.jl")
@@ -16,7 +16,7 @@ spv_x1 = SparseVector(8, [2, 5, 6], [1.25, -0.75, 3.5])
 @test isa(spv_x1, SparseVector{Float64,Int})
 
 x1_full = zeros(length(spv_x1))
-x1_full[SparseArrays.nonzeroinds(spv_x1)] = nonzeros(spv_x1)
+x1_full[SparseArraysN.nonzeroinds(spv_x1)] = nonzeros(spv_x1)
 
 @testset "basic properties" begin
     x = spv_x1
@@ -30,7 +30,7 @@ x1_full[SparseArrays.nonzeroinds(spv_x1)] = nonzeros(spv_x1)
 
     @test count(!iszero, x) == 3
     @test nnz(x) == 3
-    @test SparseArrays.nonzeroinds(x) == [2, 5, 6]
+    @test SparseArraysN.nonzeroinds(x) == [2, 5, 6]
     @test nonzeros(x) == [1.25, -0.75, 3.5]
     @test count(SparseVector(8, [2, 5, 6], [true,false,true])) == 2
 end
@@ -60,15 +60,15 @@ end
     @test occursin("3.5", string(spv_x1))
 
     # issue #30589
-    @test repr("text/plain", sparse([true])) == "1-element SparseArrays.SparseVector{Bool, $Int} with 1 stored entry:\n  [1]  =  1"
+    @test repr("text/plain", sparse([true])) == "1-element SparseArraysN.SparseVector{Bool, $Int} with 1 stored entry:\n  [1]  =  1"
 end
 
 ### Comparison helper to ensure exact equality with internal structure
 function exact_equal(x::AbstractSparseVector, y::AbstractSparseVector)
     eltype(x) == eltype(y) &&
-    eltype(SparseArrays.nonzeroinds(x)) == eltype(SparseArrays.nonzeroinds(y)) &&
+    eltype(SparseArraysN.nonzeroinds(x)) == eltype(SparseArraysN.nonzeroinds(y)) &&
     length(x) == length(y) &&
-    SparseArrays.nonzeroinds(x) == SparseArrays.nonzeroinds(y) &&
+    SparseArraysN.nonzeroinds(x) == SparseArraysN.nonzeroinds(y) &&
     nonzeros(x) == nonzeros(y)
 end
 
@@ -129,7 +129,7 @@ end
     @testset "from dictionary" begin
         function my_intmap(x)
             a = Dict{Int,eltype(x)}()
-            for i in SparseArrays.nonzeroinds(x)
+            for i in SparseArraysN.nonzeroinds(x)
                 a[i] = x[i]
             end
             return a
@@ -316,13 +316,13 @@ end
 @testset "dropstored!" begin
     x = SparseVector(10, [2, 7, 9], [2.0, 7.0, 9.0])
     # Test argument bounds checking for dropstored!(x, i)
-    @test_throws BoundsError SparseArrays.dropstored!(x, 0)
-    @test_throws BoundsError SparseArrays.dropstored!(x, 11)
+    @test_throws BoundsError SparseArraysN.dropstored!(x, 0)
+    @test_throws BoundsError SparseArraysN.dropstored!(x, 11)
     # Test behavior of dropstored!(x, i)
     # --> Test dropping a single stored entry
-    @test SparseArrays.dropstored!(x, 2) == SparseVector(10, [7, 9], [7.0, 9.0])
+    @test SparseArraysN.dropstored!(x, 2) == SparseVector(10, [7, 9], [7.0, 9.0])
     # --> Test dropping a single nonstored entry
-    @test SparseArrays.dropstored!(x, 5) == SparseVector(10, [7, 9], [7.0, 9.0])
+    @test SparseArraysN.dropstored!(x, 5) == SparseVector(10, [7, 9], [7.0, 9.0])
 end
 
 @testset "findall and findnz" begin
@@ -765,7 +765,7 @@ end
             @test spresvec == op.(densevec)
             @test all(!iszero, nonzeros(spresvec))
             resvaltype = typeof(op(zero(eltype(spvec))))
-            resindtype = SparseArrays.indtype(spvec)
+            resindtype = SparseArraysN.indtype(spvec)
             @test isa(spresvec, SparseVector{resvaltype,resindtype})
         end
     end
@@ -781,7 +781,7 @@ end
         spresvec = op.(spvec)
         @test spresvec == op.(densevec)
         resvaltype = typeof(op(zero(eltype(spvec))))
-        resindtype = SparseArrays.indtype(spvec)
+        resindtype = SparseArraysN.indtype(spvec)
         @test isa(spresvec, SparseVector{resvaltype,resindtype})
     end
 end
@@ -977,7 +977,7 @@ end
                 @test mul!(y, A, x, α, β) === y
                 @test y ≈ rr
             end
-            y = SparseArrays.densemv(A, x)
+            y = SparseArraysN.densemv(A, x)
             @test isa(y, Vector{Float64})
             @test y ≈ Af*xf
         end
@@ -991,7 +991,7 @@ end
                 @test mul!(y, transpose(A), x, α, β) === y
                 @test y ≈ rr
             end
-            y = SparseArrays.densemv(A, x; trans='T')
+            y = SparseArraysN.densemv(A, x; trans='T')
             @test isa(y, Vector{Float64})
             @test y ≈ *(transpose(Af), xf)
         end
@@ -1002,16 +1002,16 @@ end
             Af = Array(A)
             xf = Array(x)
             x2f = Array(x2)
-            @test SparseArrays.densemv(A, x; trans='N') ≈ Af * xf
-            @test SparseArrays.densemv(A, x2; trans='T') ≈ transpose(Af) * x2f
-            @test SparseArrays.densemv(A, x2; trans='C') ≈ Af'x2f
-            @test_throws ArgumentError SparseArrays.densemv(A, x; trans='D')
+            @test SparseArraysN.densemv(A, x; trans='N') ≈ Af * xf
+            @test SparseArraysN.densemv(A, x2; trans='T') ≈ transpose(Af) * x2f
+            @test SparseArraysN.densemv(A, x2; trans='C') ≈ Af'x2f
+            @test_throws ArgumentError SparseArraysN.densemv(A, x; trans='D')
         end
 
         let A = sparse(bitrand(9, 16)), x = sparse(bitrand(16))
             Af = Array(A)
             xf = Array(x)
-            y = SparseArrays.densemv(A, x)
+            y = SparseArraysN.densemv(A, x)
             @test isa(y, Vector{Int})
             @test y == Af*xf
         end
@@ -1216,17 +1216,17 @@ end
 @testset "fkeep!" begin
     x = sparsevec(1:7, [3., 2., -1., 1., -2., -3., 3.], 7)
     # droptol
-    xdrop = SparseArrays.droptol!(copy(x), 1.5)
+    xdrop = SparseArraysN.droptol!(copy(x), 1.5)
     @test exact_equal(xdrop, SparseVector(7, [1, 2, 5, 6, 7], [3., 2., -2., -3., 3.]))
-    SparseArrays.droptol!(xdrop, 2.5)
+    SparseArraysN.droptol!(xdrop, 2.5)
     @test exact_equal(xdrop, SparseVector(7, [1, 6, 7], [3., -3., 3.]))
-    SparseArrays.droptol!(xdrop, 3.)
+    SparseArraysN.droptol!(xdrop, 3.)
     @test exact_equal(xdrop, SparseVector(7, Int[], Float64[]))
 
     xdrop = copy(x)
     # This will keep index 1, 3, 4, 7 in xdrop
     f_drop(i, x) = (abs(x) == 1.) || (i in [1, 7])
-    SparseArrays.fkeep!(xdrop, f_drop)
+    SparseArraysN.fkeep!(xdrop, f_drop)
     @test exact_equal(xdrop, SparseVector(7, [1, 3, 4, 7], [3., -1., 1., 3.]))
 end
 
@@ -1260,7 +1260,7 @@ end
 @testset "original dropzeros! test" begin
     xdrop = sparsevec(1:7, [3., 2., -1., 1., -2., -3., 3.], 7)
     nonzeros(xdrop)[[2, 4, 6]] .= 0.0
-    SparseArrays.dropzeros!(xdrop)
+    SparseArraysN.dropzeros!(xdrop)
     @test exact_equal(xdrop, SparseVector(7, [1, 3, 5, 7], [3, -1., -2., 3.]))
 end
 
@@ -1357,9 +1357,9 @@ mutable struct t20488 end
 @testset "show" begin
     io = IOBuffer()
     show(io, MIME"text/plain"(), sparsevec(Int64[1], [1.0]))
-    @test String(take!(io)) == "1-element SparseArrays.SparseVector{Float64, Int64} with 1 stored entry:\n  [1]  =  1.0"
+    @test String(take!(io)) == "1-element SparseArraysN.SparseVector{Float64, Int64} with 1 stored entry:\n  [1]  =  1.0"
     show(io, MIME"text/plain"(),  spzeros(Float64, Int64, 2))
-    @test String(take!(io)) == "2-element SparseArrays.SparseVector{Float64, Int64} with 0 stored entries"
+    @test String(take!(io)) == "2-element SparseArraysN.SparseVector{Float64, Int64} with 0 stored entries"
     show(io, similar(sparsevec(rand(3) .+ 0.1), t20488))
     @test String(take!(io)) == "  [1]  =  #undef\n  [2]  =  #undef\n  [3]  =  #undef"
 end
@@ -1486,7 +1486,7 @@ end
     n = 10
     A = sprand(n, n, 0.5)
     scv = view(A, :, 1)
-    @test SparseArrays.indtype(scv) == SparseArrays.indtype(A)
+    @test SparseArraysN.indtype(scv) == SparseArraysN.indtype(A)
     @test nnz(scv) == nnz(A[:, 1])
 end
 
