@@ -36,6 +36,8 @@ export AbstractSparseArray, AbstractSparseMatrix, AbstractSparseVector,
     issparse, nonzeros, nzrange, rowvals, sparse, sparsevec, spdiagm,
     sprand, sprandn, spzeros, nnz, permute, findnz
 
+export isneutral
+
 include("abstractsparse.jl")
 include("sparsematrix.jl")
 include("sparseconvert.jl")

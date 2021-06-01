@@ -2,9 +2,20 @@
 
 ### Common definitions
 
-
 import Base: sort, findall, copy!
 import LinearAlgebra: promote_to_array_type, promote_to_arrays_
+
+function isneutral(x)
+    return iszero(x)
+end
+
+function neutrals(args...)
+    return zeros(args...)
+end
+
+function neutral(x)
+    return zero(x)
+end
 
 ### The SparseVector
 
@@ -41,7 +52,7 @@ const AdjOrTransSparseVectorUnion{Tv,Ti} = LinearAlgebra.AdjOrTrans{Tv, <:Sparse
 ### Basic properties
 
 size(x::SparseVector)     = (getfield(x, :n),)
-count(f, x::SparseVector) = count(f, nonzeros(x)) + f(zero(eltype(x)))*(length(x) - nnz(x))
+count(f, x::SparseVector) = count(f, nonzeros(x)) + f(neutral(eltype(x)))*(length(x) - nnz(x))
 
 # implement the nnz - nzrange - nonzeros - rowvals interface for sparse vectors
 
@@ -322,7 +333,7 @@ function setindex!(x::SparseVector{Tv,Ti}, v::Tv, i::Ti) where {Tv,Ti<:Integer}
     if 1 <= k <= m && nzind[k] == i  # i found
         nzval[k] = v
     else  # i not found
-        if !iszero(v)
+        if !isneutral(v)
             insert!(nzind, k, i)
             insert!(nzval, k, v)
         end
@@ -413,7 +424,7 @@ function _dense2indval!(nzind::Vector{Ti}, nzval::Vector{Tv}, s::AbstractArray{T
     n = length(s)
     c = 0
     @inbounds for (i, v) in enumerate(s)
-        if !iszero(v)
+        if !isneutral(v)
             if c >= cap
                 cap = (cap == 0) ? 1 : 2*cap
                 resize!(nzind, cap)
@@ -727,7 +738,7 @@ function findall(x::SparseVector)
 end
 
 function findall(p::Function, x::SparseVector{<:Any,Ti}) where Ti
-    if p(zero(eltype(x)))
+    if p(neutral(eltype(x)))
         return invoke(findall, Tuple{Function, Any}, p, x)
     end
     numnz = nnz(x)
@@ -814,7 +825,7 @@ end
 
 function _spgetindex(m::Int, nzind::AbstractVector{Ti}, nzval::AbstractVector{Tv}, i::Integer) where {Tv,Ti}
     ii = searchsortedfirst(nzind, convert(Ti, i))
-    (ii <= m && nzind[ii] == i) ? nzval[ii] : zero(Tv)
+    (ii <= m && nzind[ii] == i) ? nzval[ii] : neutral(Tv)
 end
 
 function getindex(x::AbstractSparseVector, i::Integer)
@@ -942,7 +953,7 @@ function Vector(x::AbstractSparseVector{Tv}) where Tv
     n == 0 && return Vector{Tv}()
     nzind = nonzeroinds(x)
     nzval = nonzeros(x)
-    r = zeros(Tv, n)
+    r = neutrals(Tv, n)
     for k in 1:nnz(x)
         i = nzind[k]
         v = nzval[k]
@@ -1140,7 +1151,7 @@ macro unarymap_nz2z_z2z(op, TF)
     esc(quote
         function $(op)(x::AbstractSparseVector{Tv,Ti}) where Tv<:$(TF) where Ti<:Integer
             require_one_based_indexing(x)
-            R = typeof($(op)(zero(Tv)))
+            R = typeof($(op)(neutral(Tv)))
             xnzind = nonzeroinds(x)
             xnzval = nonzeros(x)
             m = length(xnzind)
@@ -1151,7 +1162,7 @@ macro unarymap_nz2z_z2z(op, TF)
             @inbounds for j = 1:m
                 i = xnzind[j]
                 v = $(op)(xnzval[j])
-                if v != zero(v)
+                if v != neutral(v)
                     ir += 1
                     ynzind[ir] = i
                     ynzval[ir] = v
@@ -1176,7 +1187,7 @@ macro unarymap_z2nz(op, TF)
     esc(quote
         function $(op)(x::AbstractSparseVector{Tv,<:Integer}) where Tv<:$(TF)
             require_one_based_indexing(x)
-            v0 = $(op)(zero(Tv))
+            v0 = $(op)(neutral(Tv))
             R = typeof(v0)
             xnzind = nonzeroinds(x)
             xnzval = nonzeros(x)
@@ -1203,7 +1214,7 @@ function _binarymap(f::Function,
                     y::AbstractSparseVector{Ty},
                     mode::Int) where {Tx,Ty}
     0 <= mode <= 2 || throw(ArgumentError("Incorrect mode $mode."))
-    R = typeof(f(zero(Tx), zero(Ty)))
+    R = typeof(f(neutral(Tx), neutral(Ty)))
     n = length(x)
     length(y) == n || throw(DimensionMismatch())
 
@@ -1266,27 +1277,27 @@ function _binarymap_mode_1!(f::Function, mx::Int, my::Int,
         jy = ynzind[iy]
         if jx == jy
             v = f(xnzval[ix], ynzval[iy])
-            if v != zero(v)
+            if v != neutral(v)
                 ir += 1; rind[ir] = jx; rval[ir] = v
             end
             ix += 1; iy += 1
         elseif jx < jy
-            v = f(xnzval[ix], zero(Ty))
+            v = f(xnzval[ix], neutral(Ty))
             ir += 1; rind[ir] = jx; rval[ir] = v
             ix += 1
         else
-            v = f(zero(Tx), ynzval[iy])
+            v = f(neutral(Tx), ynzval[iy])
             ir += 1; rind[ir] = jy; rval[ir] = v
             iy += 1
         end
     end
     @inbounds while ix <= mx
-        v = f(xnzval[ix], zero(Ty))
+        v = f(xnzval[ix], neutral(Ty))
         ir += 1; rind[ir] = xnzind[ix]; rval[ir] = v
         ix += 1
     end
     @inbounds while iy <= my
-        v = f(zero(Tx), ynzval[iy])
+        v = f(neutral(Tx), ynzval[iy])
         ir += 1; rind[ir] = ynzind[iy]; rval[ir] = v
         iy += 1
     end
@@ -1304,34 +1315,34 @@ function _binarymap_mode_2!(f::Function, mx::Int, my::Int,
         jy = ynzind[iy]
         if jx == jy
             v = f(xnzval[ix], ynzval[iy])
-            if v != zero(v)
+            if v != neutral(v)
                 ir += 1; rind[ir] = jx; rval[ir] = v
             end
             ix += 1; iy += 1
         elseif jx < jy
-            v = f(xnzval[ix], zero(Ty))
-            if v != zero(v)
+            v = f(xnzval[ix], neutral(Ty))
+            if v != neutral(v)
                 ir += 1; rind[ir] = jx; rval[ir] = v
             end
             ix += 1
         else
-            v = f(zero(Tx), ynzval[iy])
-            if v != zero(v)
+            v = f(neutral(Tx), ynzval[iy])
+            if v != neutral(v)
                 ir += 1; rind[ir] = jy; rval[ir] = v
             end
             iy += 1
         end
     end
     @inbounds while ix <= mx
-        v = f(xnzval[ix], zero(Ty))
-        if v != zero(v)
+        v = f(xnzval[ix], neutral(Ty))
+        if v != neutral(v)
             ir += 1; rind[ir] = xnzind[ix]; rval[ir] = v
         end
         ix += 1
     end
     @inbounds while iy <= my
-        v = f(zero(Tx), ynzval[iy])
-        if v != zero(v)
+        v = f(neutral(Tx), ynzval[iy])
+        if v != neutral(v)
             ir += 1; rind[ir] = ynzind[iy]; rval[ir] = v
         end
         iy += 1
@@ -1359,11 +1370,11 @@ end
 
 function _sum(f, x::AbstractSparseVector)
     n = length(x)
-    n > 0 || return sum(f, nonzeros(x)) # return zero() of proper type
+    n > 0 || return sum(f, nonzeros(x)) # return neutral() of proper type
     m = nnz(x)
-    (m == 0 ? n * f(zero(eltype(x))) :
+    (m == 0 ? n * f(neutral(eltype(x))) :
      m == n ? sum(f, nonzeros(x)) :
-     Base.add_sum((n - m) * f(zero(eltype(x))), sum(f, nonzeros(x))))
+     Base.add_sum((n - m) * f(neutral(eltype(x))), sum(f, nonzeros(x))))
 end
 
 sum(f::Union{Function, Type}, x::AbstractSparseVector) = _sum(f, x) # resolve ambiguity
@@ -1374,15 +1385,15 @@ function _maximum(f, x::AbstractSparseVector)
     n = length(x)
     if n == 0
         if f === abs || f === abs2
-            return zero(eltype(x)) # preserving maximum(abs/abs2, x) behaviour in 1.0.x
+            return neutral(eltype(x)) # preserving maximum(abs/abs2, x) behaviour in 1.0.x
         else
             throw(ArgumentError("maximum over an empty array is not allowed."))
         end
     end
     m = nnz(x)
-    (m == 0 ? f(zero(eltype(x))) :
+    (m == 0 ? f(neutral(eltype(x))) :
      m == n ? maximum(f, nonzeros(x)) :
-     max(f(zero(eltype(x))), maximum(f, nonzeros(x))))
+     max(f(neutral(eltype(x))), maximum(f, nonzeros(x))))
 end
 
 maximum(f::Union{Function, Type}, x::AbstractSparseVector) = _maximum(f, x) # resolve ambiguity
@@ -1393,9 +1404,9 @@ function _minimum(f, x::AbstractSparseVector)
     n = length(x)
     n > 0 || throw(ArgumentError("minimum over an empty array is not allowed."))
     m = nnz(x)
-    (m == 0 ? f(zero(eltype(x))) :
+    (m == 0 ? f(neutral(eltype(x))) :
      m == n ? minimum(f, nonzeros(x)) :
-     min(f(zero(eltype(x))), minimum(f, nonzeros(x))))
+     min(f(neutral(eltype(x))), minimum(f, nonzeros(x))))
 end
 
 minimum(f::Union{Function, Type}, x::AbstractSparseVector) = _minimum(f, x) # resolve ambiguity
@@ -1475,7 +1486,7 @@ function dot(x::AbstractVector{Tx}, y::SparseVectorUnion{Ty}) where {Tx<:Number,
     length(y) == n || throw(DimensionMismatch())
     nzind = nonzeroinds(y)
     nzval = nonzeros(y)
-    s = dot(zero(Tx), zero(Ty))
+    s = dot(neutral(Tx), neutral(Ty))
     @inbounds for i = 1:length(nzind)
         s += dot(x[nzind[i]], nzval[i])
     end
@@ -1488,7 +1499,7 @@ function dot(x::SparseVectorUnion{Tx}, y::AbstractVector{Ty}) where {Tx<:Number,
     length(x) == n || throw(DimensionMismatch())
     nzind = nonzeroinds(x)
     nzval = nonzeros(x)
-    s = dot(zero(Tx), zero(Ty))
+    s = dot(neutral(Tx), neutral(Ty))
     @inbounds for i = 1:length(nzind)
         s += dot(nzval[i], y[nzind[i]])
     end
@@ -1499,7 +1510,7 @@ function _spdot(f::Function,
                 xj::Int, xj_last::Int, xnzind, xnzval,
                 yj::Int, yj_last::Int, ynzind, ynzval)
     # dot product between ranges of non-zeros,
-    s = f(zero(eltype(xnzval)), zero(eltype(ynzval)))
+    s = f(neutral(eltype(xnzval)), neutral(eltype(ynzval)))
     @inbounds while xj <= xj_last && yj <= yj_last
         ix = xnzind[xj]
         iy = ynzind[yj]
@@ -1959,7 +1970,7 @@ end
 
 #sorting
 function sort(x::SparseVector{Tv,Ti}; kws...) where {Tv,Ti}
-    allvals = push!(copy(nonzeros(x)),zero(Tv))
+    allvals = push!(copy(nonzeros(x)),neutral(Tv))
     sinds = sortperm(allvals;kws...)
     n,k = length(x),length(allvals)
     z = findfirst(isequal(k),sinds)::Int
@@ -2011,7 +2022,7 @@ Removes stored numerical zeros from `x`.
 For an out-of-place version, see [`dropzeros`](@ref). For
 algorithmic information, see `fkeep!`.
 """
-dropzeros!(x::SparseVector) = fkeep!(x, (i, x) -> !iszero(x))
+dropzeros!(x::SparseVector) = fkeep!(x, (i, x) -> !isneutral(x))
 
 """
     dropzeros(x::SparseVector)
@@ -2081,7 +2092,7 @@ import Base.fill!
 function fill!(A::Union{SparseVector, AbstractSparseMatrixCSC}, x)
     T = eltype(A)
     xT = convert(T, x)
-    if xT == zero(T)
+    if xT == neutral(T)
         fill!(nonzeros(A), xT)
     else
         _fillnonzero!(A, xT)
