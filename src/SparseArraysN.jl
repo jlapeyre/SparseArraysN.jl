@@ -3,7 +3,7 @@
 """
 Support for sparse arrays. Provides `AbstractSparseArray` and subtypes.
 """
-module SparseArrays
+module SparseArraysN
 
 using Base: ReshapedArray, promote_op, setindex_shape_check, to_shape, tail,
     require_one_based_indexing
@@ -62,4 +62,4 @@ end
 
 LinearAlgebra.diagzero(D::Diagonal{<:AbstractSparseMatrix{T}},i,j) where {T} = spzeros(T, size(D.diag[i], 1), size(D.diag[j], 2))
 
-end
+end # module SparseArraysN
