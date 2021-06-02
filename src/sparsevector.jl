@@ -5,17 +5,19 @@
 import Base: sort, findall, copy!
 import LinearAlgebra: promote_to_array_type, promote_to_arrays_
 
-function isneutral(x)
-    return iszero(x)
-end
+@inline neutral(x) = zero(x)
+@inline isneutral(x) = iszero(x)
+neutrals(::Type{T}, args...) where T = zeros(T, args...)
 
-function neutrals(args...)
-    return zeros(args...)
-end
+"""
+    neutrals(T, args...)
 
-function neutral(x)
-    return zero(x)
-end
+Return an `Array` of neutral elements for type `T`. `args` are the same
+as for `zeros` and `ones`.
+
+`neutrals` is typically a wrapper for `zeros` or `ones`.
+"""
+neutrals(args...) = zeros(args...)
 
 ### The SparseVector
 
