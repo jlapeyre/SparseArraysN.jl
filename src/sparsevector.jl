@@ -1126,19 +1126,23 @@ promote_to_array_type(A::Tuple{Vararg{Union{_SparseConcatGroup,UniformScaling}}}
 promote_to_arrays_(n::Int, ::Type{SparseMatrixCSC}, J::UniformScaling) = sparse(J, n, n)
 
 # Concatenations strictly involving un/annotated dense matrices/vectors should yield dense arrays
-Base._cat(dims, xs::_DenseConcatGroup...) = Base.cat_t(promote_eltype(xs...), xs...; dims=dims)
+# DISABLE
+# Base._cat(dims, xs::_DenseConcatGroup...) = Base.cat_t(promote_eltype(xs...), xs...; dims=dims)
 # DISABLE
 # vcat(A::Vector...) = Base.typed_vcat(promote_eltype(A...), A...)
 # DISABLE
 # vcat(A::_DenseConcatGroup...) = Base.typed_vcat(promote_eltype(A...), A...)
 # DISABLE
 # hcat(A::Vector...) = Base.typed_hcat(promote_eltype(A...), A...)
-hcat(A::_DenseConcatGroup...) = Base.typed_hcat(promote_eltype(A...), A...)
+# DISABLE
+# hcat(A::_DenseConcatGroup...) = Base.typed_hcat(promote_eltype(A...), A...)
 # DISABLE
 # hvcat(rows::Tuple{Vararg{Int}}, xs::_DenseConcatGroup...) = Base.typed_hvcat(promote_eltype(xs...), rows, xs...)
 # For performance, specially handle the case where the matrices/vectors have homogeneous eltype
-Base._cat(dims, xs::_TypedDenseConcatGroup{T}...) where {T} = Base.cat_t(T, xs...; dims=dims)
-vcat(A::_TypedDenseConcatGroup{T}...) where {T} = Base.typed_vcat(T, A...)
+# DISABLE
+# Base._cat(dims, xs::_TypedDenseConcatGroup{T}...) where {T} = Base.cat_t(T, xs...; dims=dims)
+# DISABLE
+# vcat(A::_TypedDenseConcatGroup{T}...) where {T} = Base.typed_vcat(T, A...)
 # DISABLE
 # hcat(A::_TypedDenseConcatGroup{T}...) where {T} = Base.typed_hcat(T, A...)
 # DISABLE
