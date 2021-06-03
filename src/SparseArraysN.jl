@@ -58,10 +58,11 @@ include("deprecated.jl")
 zero(a::AbstractSparseArray) = spzeros(eltype(a), size(a)...)
 
 const BiTriSym = Union{Bidiagonal,SymTridiagonal,Tridiagonal}
-function *(A::BiTriSym, B::BiTriSym)
-    TS = promote_op(matprod, eltype(A), eltype(B))
-    mul!(similar(A, TS, size(A)...), A, B)
-end
+# DISABLE
+# function *(A::BiTriSym, B::BiTriSym)
+#     TS = promote_op(matprod, eltype(A), eltype(B))
+#     mul!(similar(A, TS, size(A)...), A, B)
+# end
 
 LinearAlgebra.diagzero(D::Diagonal{<:AbstractSparseMatrix{T}},i,j) where {T} = spzeros(T, size(D.diag[i], 1), size(D.diag[j], 2))
 
