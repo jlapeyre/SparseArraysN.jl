@@ -45,3 +45,10 @@ I think the `SparseArrays` library commits type piracy, in that it defines metho
 introduced outside of `SparseArrays` on types introduced outside of `SparseArrays`. And `SparseArrays` is
 compiled into the standard Julia image. This should probably be fixed in the standard library version.
 
+## Type Piracy
+
+Several methods in the stdlib version of `SparseArrays` are type pirating. They define methods for
+functions and types that are defined outside of `SparseArrays`. This causes method-redefinition warnings
+when `SparseArraysN` is compiled. I guess this is because `SparseArrays` is compiled into the system image.
+So, I have commented out all of these methods in the source of `SparseArraysN`, with each removed item
+preceeded by a comment *DISABLED*. With these edits, this package loads without warnings.
