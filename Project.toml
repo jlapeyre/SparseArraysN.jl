@@ -1,6 +1,6 @@
 name = "SparseArraysN"
 uuid = "7d983096-c313-11eb-0b95-579bee092dbe"
-version = "0.0.2"
+version = "0.0.3"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
